@@ -1,0 +1,58 @@
+CXX = g++
+EXEC_SERVER = server
+
+DIR_INC_IP := ../../ip
+DIR_INC_UTIL := ../../util
+DIR_INC_BASE := ../../base
+DIR_INC_NET := ../../net
+
+DIR_OBJ = ./
+DIR_BIN = ./
+DIR_SRC = ./
+DIR_LINK = ./
+
+SOURCE = server.cc ${DIR_INC_NET}/*.cc ${DIR_INC_UTIL}/*.cc ${DIR_INC_BASE}/*.cc
+
+# SRCS = $(wildcard ${SOURCE}/*.cc)
+SRCS = $(wildcard ${DIR_INC_NET}/*.cc) $(wildcard ${DIR_INC_BASE}/*.cc) $(wildcard ${DIR_INC_UTIL}/*.cc) $(wildcard ${DIR_SRC}/*.cc)
+DIR = $(notdir $(SRCS))
+OBJS = $(patsubst %.cc,${DIR_OBJ}/%.o,$(DIR))
+
+# test:
+	# @echo $(SOURCE)
+	# @echo $(SRCS)
+	# @echo $(DIR)
+	# @echo $(OBJS)
+	# @echo ${DIR_INC_BASE}/%.cc
+
+CFLAGS = -g -D_REENTRANT -Wall -std=c++14 -I
+LDFLAGS = -lpthread
+
+BIN_SERVER = ${DIR_BIN}/${EXEC_SERVER}
+TARGET = ${BIN_SERVER}
+
+all : ${TARGET} 
+
+${BIN_SERVER} : ${OBJS}
+	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS) 
+# ${BIN_SERVER} : ${DIR_OBJ}/server.o ${OBJS} ${DIR_LINK}/*.o
+# 	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS) 
+
+# ${DIR_OBJ}/%.o : server.cc ${DIR_INC_NET}/%.cc ${DIR_INC_UTIL}/%.cc ${DIR_INC_BASE}/%.cc 
+# 	$(CXX) -c $(CFLAGS) $^ -o $@    
+
+
+# ${DIR_OBJ}/%.o : ${SRC} 
+# 	$(CXX) -c $(CFLAGS) $^ -o $@    
+${DIR_OBJ}/%.o:  ${DIR_INC_BASE}/%.cc ${DIR_INC_UTIL}/%.cc ${DIR_INC_NET}/%.cc
+	$(CXX) -c $(CFLAGS) $< -o $@ 
+
+# ${DIR_OBJ}/%.o : server.cc 
+# 	$(CXX) -c $(CFLAGS) $^ -o $@    
+# ${DIR_LINK}/%.o : ${DIR_INC_NET}/%.cc
+# 	$(CXX) -c $(CFLAGS) $^ -o $@    
+# ${DIR_LINK}/%.o : ${DIR_INC_BASE}/%.cc
+# 	$(CXX) -c $(CFLAGS) $^ -o $@    
+# ${DIR_LINK}/%.o : ${DIR_INC_UTIL}/%.cc
+# 	$(CXX) -c $(CFLAGS) $^ -o $@    
+
