@@ -19,10 +19,18 @@ namespace rtoys
                 Self& operator<<(const std::string& msg);
                 Self& operator<<(const char* msg);
                 Self& operator<<(int n);
+                Self& operator<<(long n);
                 Self& operator<<(long long int n);
                 Self& operator<<(std::size_t n);
 
+                Self& operator()(const std::string& msg);
+                Self& operator()(const char* msg);
+                Self& operator()(int n);
+                Self& operator()(long n);
+                Self& operator()(long long int n);
+                Self& operator()(std::size_t n);
             public:
+                std::size_t size() const ;
                 std::string retrieveAll();
             private:
                 net::BaseBuffer<1024> buffer_;
@@ -35,10 +43,12 @@ namespace rtoys
                 {
                     TRACE,
                     DEBUG,
+                    INFO,
                     ERROR,
                     FATAL
                 };
 
+                enum { HEADER_SIZE = 120 };
                 typedef std::function<void(const std::string& msg)> output_func_type;
                 typedef std::function<void()> flush_func_type;
             public:
@@ -60,6 +70,7 @@ namespace rtoys
                 void formatLevel();
                 void formatThread();
                 void formatTime();
+                void formatPosition();
             private:
                 LogLevel level_;
                 std::string filename_;
@@ -73,6 +84,7 @@ namespace rtoys
     }
 
 #define log_trace   rtoys::util::Logging(rtoys::util::Logging::LogLevel::TRACE, __FILE__, __func__, __LINE__).stream()
+#define log_info    rtoys::util::Logging(rtoys::util::Logging::LogLevel::INFO,  __FILE__, __func__, __LINE__).stream()
 #define log_debug   rtoys::util::Logging(rtoys::util::Logging::LogLevel::DEBUG, __FILE__, __func__, __LINE__).stream()
 #define log_error   rtoys::util::Logging(rtoys::util::Logging::LogLevel::ERROR, __FILE__, __func__, __LINE__).stream()
 #define log_fatal   rtoys::util::Logging(rtoys::util::Logging::LogLevel::FATAL, __FILE__, __func__, __LINE__).stream()

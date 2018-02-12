@@ -89,21 +89,18 @@ namespace rtoys
 
         void Channel::handleEvents()
         {
-            log_trace;
             if(readable())
             {
-                log_trace;
                 readCallBack_();
             }
             else if(writeable())
             {
-                log_trace;
                 writeCallBack_();
             }
             else
             {
                 /* error */
-                log_trace;
+                log_error << "unknown channel events";
                 disableAll();
             }
         }

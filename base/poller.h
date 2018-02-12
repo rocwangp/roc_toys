@@ -24,7 +24,7 @@ namespace rtoys
                 Poller();
 
                 void updateChannel(Channel* channel);
-                void wait(std::vector<Channel*>& activeChannels);
+                void wait(std::vector<Channel*>& activeChannels, int timeout);
             private:
                 int epollfd_;
                 int eventNums_;

@@ -4,6 +4,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+#include <algorithm>
 
 namespace rtoys
 {
@@ -60,6 +61,10 @@ namespace rtoys
                 {
                     writeIdx_ += bytes;
                 }
+                void retrieveBytes(int bytes)
+                {
+                    readIdx_ -= bytes;
+                }
                 void enableSpace(int bytes)
                 {
                     if(writeableBytes() > bytes)
@@ -89,6 +94,19 @@ namespace rtoys
                     reset();
                     return msg;
                 }
+
+                std::string readUtil(const std::string& boundary)
+                {
+                    auto it = std::search(buffer_.begin(), buffer_.end(), boundary.begin(), boundary.end());  
+                    std::string info;
+                    if(it != buffer_.end())
+                    {
+                        info.assign(buffer_.begin(), it + boundary.size()); 
+                        retrieveBytes(info.size());
+                    }
+                    return info;
+                }
+
             private:
                 std::vector<char> buffer_;
                 int readIdx_;

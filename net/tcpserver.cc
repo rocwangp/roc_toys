@@ -8,7 +8,7 @@ namespace rtoys
 {
     namespace net
     {
-        TcpServer::TcpServer(const std::string& ip, unsigned short port)
+        TcpServer::TcpServer(const std::string& ip, unsigned short port, int threadNums)
             : loop_(std::make_shared<EventLoop>()),
               acceptor_(std::make_unique<Acceptor>(loop_.get(), ip, port))
         {
@@ -16,13 +16,15 @@ namespace rtoys
                             [this](int fd)
                             {
                                 EventLoop* loop = nullptr;
-                                if(nextLoop_ >= static_cast<int>(loops_.size()))
+                                if(loops_.empty())
                                     loop = this->loop_.get(); 
                                 else
                                     loop = this->loops_[nextLoop_++];
                                 nextLoop_ %= loops_.size();
                                 
+                                log_trace;
                                 auto conn = std::make_shared<Connection>(loop, fd);
+                                conn->onBuild(this->connBuildCallBack_);
                                 conn->onRead(this->connReadCallBack_);
                                 conn->onWrite(this->connWriteCallBack_);
                                 conn->onClose(
@@ -45,16 +47,9 @@ namespace rtoys
                                                     conn->connEstablished();
                                                 }
                                             );
+                                log_trace;
                             }
                         );
-        }
-
-        TcpServer::~TcpServer()
-        {
-
-        }
-        void TcpServer::start(int threadNums)
-        {
             {
                 log_trace;
                 int avaThreadNums = std::thread::hardware_concurrency();
@@ -75,6 +70,15 @@ namespace rtoys
                     loops_.emplace_back(loopPromise.get_future().get());
                 nextLoop_ = 0;
             }
+
+        }
+
+        TcpServer::~TcpServer()
+        {
+
+        }
+        void TcpServer::start(int threadNums)
+        {
             acceptor_->start();
             loop_->loop();
         }
@@ -94,5 +98,47 @@ namespace rtoys
         /*         }; */
         /*     return result; */
         /* } */
+
+        
+        util::Timer TcpServer::setTimer(const std::chrono::steady_clock::time_point& t,
+                                 const std::chrono::milliseconds& interval,
+                                 std::function<void()> cb)
+        {
+            EventLoop* loop = loop_.get();
+            if(!loops_.empty())
+            {
+                loop = loops_[nextLoop_++];
+                nextLoop_ %= loops_.size();
+            }
+            util::Timer timer(t, interval, cb); 
+            loop->safeCall(
+                            [loop, timer]
+                            {
+                                loop->runAt(timer);
+                            }
+                        );
+            return timer;
+        }
+
+        util::Timer TcpServer::runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb) 
+        {
+            return setTimer(t, std::chrono::milliseconds(0), cb); 
+        }
+
+        util::Timer TcpServer::runEvery(const std::chrono::steady_clock::time_point& t, 
+                                 const std::chrono::milliseconds& interval, 
+                                 std::function<void()> cb)
+        {
+           return setTimer(t, interval, cb); 
+        }
+        
+        util::Timer TcpServer::runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb)
+        {
+            return runAt(std::chrono::steady_clock::now() + interval, cb);
+        }
+
+        void TcpServer::cancel(const util::Timer& timer)
+        {
+        }
     }
 }

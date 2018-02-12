@@ -141,6 +141,14 @@ namespace rtoys
                         return true;
                     }
 
+                    static bool connect(int fd, const std::string& ip, unsigned short port)
+                    {
+                        address::v4 v4Addr(ip, port);
+                        if(::connect(fd, v4Addr.data(), v4Addr.size()) == -1)
+                            return false;
+                        return true;
+                    }
+
                     static int read(int fd, std::shared_ptr<net::Buffer> readBuffer)
                     {
                         unsigned int bytes = 0;
@@ -179,6 +187,11 @@ namespace rtoys
             class endpoint
             {
                 public:
+                    endpoint()
+                        : fd_(-1)
+                    {
+
+                    }
                     endpoint(address::v4, int fd)
                         : fd_(fd),
                           peerAddr_(std::make_shared<address::v4>()),
@@ -186,6 +199,12 @@ namespace rtoys
                     {
                        peerAddr_->toPeerAddress(fd_); 
                        peerAddr_->toLocalAddress(fd_);
+                    }
+
+                    void reset(address::v4 addr, int fd)
+                    {
+                        endpoint tmp(addr, fd);
+                        std::swap(tmp, *this);
                     }
                     
                     std::string peerAddrToString()

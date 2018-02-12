@@ -20,10 +20,12 @@ namespace rtoys
             private util::noncopyable
         {
             public:
+                typedef std::function<void(const std::shared_ptr<Connection>&)> conn_build_type;
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_read_type;
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_write_type;
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_close_type;
             public:
+                Connection();
                 Connection(EventLoop* loop, int fd);
                 ~Connection(); 
 
@@ -31,18 +33,23 @@ namespace rtoys
                 void connDestroyed();
                 std::string name() const { return name_; }
                 
+                void onBuild(conn_build_type cb) { connBuildCallBack_ = cb; }
                 void onRead(conn_read_type cb) { connReadCallBack_ = cb; }
                 void onWrite(conn_write_type cb) { connWriteCallBack_ = cb; }
                 void onClose(conn_close_type cb) { connCloseCallBack_ = cb; }
 
+                void connect(const std::string& ip, unsigned short port);
                 void send(const std::string& msg);
 
                 std::string readAll();
+
+                std::shared_ptr<Buffer> readBuffer();
             private:
                 EventLoop *loop_;
                 std::unique_ptr<Channel> channel_;
                 ip::tcp::endpoint endpoint_;
                 std::string name_;
+                conn_build_type connBuildCallBack_;
                 conn_read_type connReadCallBack_;
                 conn_write_type connWriteCallBack_;
                 conn_close_type connCloseCallBack_;
