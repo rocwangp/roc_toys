@@ -26,67 +26,57 @@ namespace rtoys
                                     loop = this->loops_[nextLoop_++];
                                 nextLoop_ %= loops_.size();
                                 
-                                /* log_trace; */
                                 auto conn = std::make_shared<Connection>(loop, fd);
                                 conn->onBuild(this->connBuildCallBack_);
                                 conn->onRead(this->connReadCallBack_);
                                 conn->onWrite(this->connWriteCallBack_);
                                 conn->onClose(
-                                                [this]
-                                                (std::shared_ptr<Connection> connPtr)
-                                                {
-                                                    this->loop_->safeCall(
-                                                                [this, connPtr]
-                                                                {
-                                                                    this->connMap_.erase(connPtr->name());
-                                                                }
-                                                            );
-                                                }
-                                            );
+                                        [this] (std::shared_ptr<Connection> connPtr)
+                                        {
+                                            this->loop_->safeCall(
+                                                    [this, connPtr]
+                                                    {
+                                                          this->connMap_.erase(connPtr->name());
+                                                    }
+                                              );
+                                        }
+                                    );
                                 auto name = conn->name();
                                 connMap_.insert(std::make_pair(name, conn));
                                 loop->safeCall(
-                                                [conn]
-                                                {
-                                                    conn->connEstablished();
-                                                }
-                                            );
-                                /* log_info << name; */
+                                        [conn]
+                                        {
+                                            conn->connEstablished();
+                                        }
+                                    );
                             }
                         );
+            int avaThreadNums = std::thread::hardware_concurrency();
+            threadNums = avaThreadNums == 0 ? threadNums : avaThreadNums;
+            std::vector<std::promise<EventLoop*>> promises(threadNums);
+            for(int i = 0; i < threadNums; ++i)
             {
-                /* log_trace; */
-                int avaThreadNums = std::thread::hardware_concurrency();
-                threadNums = avaThreadNums == 0 ? threadNums : avaThreadNums;
-                std::vector<std::promise<EventLoop*>> promises(threadNums);
-                for(int i = 0; i < threadNums; ++i)
-                {
-                    threads_.emplace_back(
-                                    [&loopPromise = promises[i]]
-                                    {
-                                        EventLoop loop;
-                                        loopPromise.set_value(&loop);
-                                        loop.loop();
-                                    }
-                                );
-                }
-                for(auto&& loopPromise : promises)
-                    loops_.emplace_back(loopPromise.get_future().get());
-                nextLoop_ = 0;
+                threads_.emplace_back(
+                                [&loopPromise = promises[i], &ip, &port]
+                                {
+                                    EventLoop loop;
+                                    loopPromise.set_value(&loop);
+                                    Acceptor acceptor(&loop,ip, port);
+                                    acceptor.start();
+                                    loop.loop();
+                                }
+                            );
             }
-
-            acceptor_->start();
+            for(auto&& loopPromise : promises)
+                loops_.emplace_back(loopPromise.get_future().get());
+            nextLoop_ = 0;
         }
 
         TcpServer::~TcpServer()
         {
 
         }
-        void TcpServer::start(int threadNums)
-        {
-            loop_->loop();
-        }
-
+  
         /* template <class F, class... Args> */
         /* auto TcpServer::onConnRead(F&& f, Args... args) */
         /*     -> std::future<typename std::result_of<F(Args...)>::type> */

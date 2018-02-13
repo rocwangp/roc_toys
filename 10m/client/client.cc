@@ -58,42 +58,43 @@ int main(int argc, char* argv[])
         int closed = 0;
 
         std::vector<std::shared_ptr<Connection>> conns;
-        /* for(int k = 0; k < static_cast<int>(createSec * 10); ++k) */
-        /* { */
-            /* loop.runAfter(std::chrono::milliseconds(k * 100), */
-            /*              [&] */
-            /*              { */
-            /*                 int c = connCnt / createSec / 10; */
-            /*                 for(int i = 0; i < c; ++i) */
-            /*                 { */
-            /*                     short int port = beginPort + (i % (endPort - beginPort)); */
-            /*                     auto conn = std::make_shared<Connection>(&loop); */
-            /*                     conn->onBuild( */
-            /*                                 [&](const auto&) */
-            /*                                 { */
-            /*                                     ++connected; */
-            /*                                 } */
-            /*                             ); */
-            /*                     conn->onRead( */
-            /*                                 [&](const auto& connPtr) */
-            /*                                 { */
-            /*                                     ++recv; */
-            /*                                     connPtr->send(connPtr->readAll()); */
-            /*                                     ++send; */
-            /*                                 } */
-            /*                             ); */
-            /*                     conn->onClose( */
-            /*                                 [&](const auto&) */
-            /*                                 { */
-            /*                                     ++closed; */
-            /*                                 } */
-            /*                             ); */
-            /*                     conn->connect(host, port); */
-            /*                     log_info(host, port); */
-            /*                     conns.push_back(conn); */
-            /*                 } */
-            /*              }); */
-        /* } */
+        for(int k = 0; k < static_cast<int>(createSec * 10); ++k)
+        {
+            loop.runAfter(std::chrono::milliseconds(k * 100),
+                         [&]
+                         {
+                            int c = connCnt / createSec / 10;
+                            for(int i = 0; i < c; ++i)
+                            {
+                                short int port = beginPort + (i % (endPort - beginPort));
+                                auto conn = std::make_shared<Connection>(&loop);
+                                conn->onBuild(
+                                            [&](const auto&)
+                                            {
+                                                ++connected;
+                                            }
+                                        );
+                                conn->onRead(
+                                            [&](const auto& connPtr)
+                                            {
+                                                ++recv;
+                                                connPtr->send(connPtr->readAll());
+                                                ++send;
+                                            }
+                                        );
+                                conn->onClose(
+                                            [&](const auto&)
+                                            {
+                                                --connected;
+                                                ++closed;
+                                            }
+                                        );
+                                conn->connect(host, port);
+                                log_info(host, port);
+                                conns.push_back(conn);
+                            }
+                         });
+        }
 
         log_info("done");
         auto report = std::make_shared<Connection>(&loop);

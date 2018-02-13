@@ -37,16 +37,16 @@ namespace rtoys
             public:
                 void cancel(const util::Timer& timer);
 
-                void runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb);
-                void runAt(const std::chrono::steady_clock::time_point& t, const std::chrono::milliseconds& interval, std::function<void()> cb);
+                util::Timer runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb);
+                util::Timer runAt(const std::chrono::steady_clock::time_point& t, const std::chrono::milliseconds& interval, std::function<void()> cb);
 
-                void runEvery(const std::chrono::milliseconds& interval, std::function<void()> cb);
-                void runEvery(const std::chrono::steady_clock::time_point& t, 
+                util::Timer runEvery(const std::chrono::milliseconds& interval, std::function<void()> cb);
+                util::Timer runEvery(const std::chrono::steady_clock::time_point& t, 
                               const std::chrono::milliseconds& interval, 
                               std::function<void()> cb);
 
-                void runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb);
-                void runAfter(const std::chrono::milliseconds& t, const std::chrono::milliseconds& interval, std::function<void()> cb);
+                util::Timer runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb);
+                util::Timer runAfter(const std::chrono::milliseconds& t, const std::chrono::milliseconds& interval, std::function<void()> cb);
 
                 void setTimer(util::Timer timer);
 

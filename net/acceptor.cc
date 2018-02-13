@@ -21,12 +21,17 @@ namespace rtoys
                                 int fd = rtoys::ip::tcp::socket::accept(channel_->fd());
                                 if(fd == -1)
                                 {
-                                    util::io::close(idleFd_);
-                                    fd = rtoys::ip::tcp::socket::accept(channel_->fd());
-                                    rtoys::ip::tcp::socket::close(fd);
-                                    idleFd_ = util::io::open("dev/null");
-                                    fd = -1;
-                                    log_error("fd use out...");
+                                    if(errno == EMFILE)
+                                    {
+                                        util::io::close(idleFd_);
+                                        fd = rtoys::ip::tcp::socket::accept(channel_->fd());
+                                        rtoys::ip::tcp::socket::close(fd);
+                                        idleFd_ = util::io::open("dev/null");
+                                        fd = -1;
+                                        log_error("fd use out...");
+                                    }
+                                    
+                                    return;
                                 }
                                 if(acceptCallBack_)
                                     this->acceptCallBack_(fd);

@@ -42,7 +42,6 @@ namespace rtoys
                 void onConnWrite(conn_write_type cb) { connWriteCallBack_ = cb; }
                 void onConnClose(conn_close_type cb) { connCloseCallBack_ = cb; }
 
-                void start(int threadNums = 16);
 
                 /* util::Timer runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb); */
 
