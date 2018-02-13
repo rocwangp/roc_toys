@@ -155,7 +155,6 @@ namespace rtoys
                         ::ioctl(fd, FIONREAD, &bytes); 
                         readBuffer->enableSpace(bytes);
                         int n = ::read(fd, readBuffer->end(), bytes);
-                        log_debug << std::string(readBuffer->begin(), readBuffer->end());
                         return n;
                     }
 
@@ -179,6 +178,11 @@ namespace rtoys
                         int opt = 1;
                         ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
                     }
+                    static void set_nonblock(int fd)
+                    {
+                        int opt = 1;
+                        ::setsockopt(fd, SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(opt));
+                    }
             };
 
             
@@ -198,7 +202,7 @@ namespace rtoys
                           localAddr_(std::make_shared<address::v4>())
                     {
                        peerAddr_->toPeerAddress(fd_); 
-                       peerAddr_->toLocalAddress(fd_);
+                       localAddr_->toLocalAddress(fd_);
                     }
 
                     void reset(address::v4 addr, int fd)

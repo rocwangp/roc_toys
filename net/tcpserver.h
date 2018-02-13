@@ -31,6 +31,7 @@ namespace rtoys
 
             public:
                 TcpServer(const std::string& ip, unsigned short port, int threadNums = 16);
+                TcpServer(EventLoop* loop, const std::string& ip, unsigned short port, int threadNums = 16);
                 ~TcpServer(); 
                 /* template <class F, class... Args> */
                 /* auto onConnRead(F&& f, Args... args) */
@@ -43,19 +44,19 @@ namespace rtoys
 
                 void start(int threadNums = 16);
 
-                util::Timer runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb);
+                /* util::Timer runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb); */
 
-                util::Timer runEvery(const std::chrono::steady_clock::time_point& t, 
-                              const std::chrono::milliseconds& interval, 
-                              std::function<void()> cb);
+                /* util::Timer runEvery(const std::chrono::steady_clock::time_point& t, */ 
+                /*               const std::chrono::milliseconds& interval, */ 
+                /*               std::function<void()> cb); */
 
-                util::Timer runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb);
+                /* util::Timer runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb); */
 
-                void cancel(const util::Timer& timer);
-            private:
-                util::Timer setTimer(const std::chrono::steady_clock::time_point& t,
-                               const std::chrono::milliseconds& interlva,
-                               std::function<void()> cb);
+                /* void cancel(const util::Timer& timer); */
+            /* private: */
+                /* util::Timer setTimer(const std::chrono::steady_clock::time_point& t, */
+                /*                const std::chrono::milliseconds& interlva, */
+                /*                std::function<void()> cb); */
             private:
                 std::shared_ptr<EventLoop> loop_;
                 std::unique_ptr<Acceptor> acceptor_;

@@ -1,6 +1,9 @@
 #include "eventloop.h"
 #include "channel.h"
 #include "../base/poller.h"
+#include "../util/logging.h"
+
+#include <chrono>
 
 namespace rtoys
 {
@@ -88,21 +91,7 @@ namespace rtoys
             wakeup();
         }
 
-        void EventLoop::runAt(const util::Timer& timer)
-        {
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                if(timers_.empty() || *timers_.begin() > timer)
-                {
-                    timers_.insert(timer);
-                }
-                else
-                {
-                    timers_.insert(timer);
-                }
-            }
-            wakeup();
-        }
+  
 
         void EventLoop::cancel(const util::Timer& timer)
         {
@@ -111,5 +100,60 @@ namespace rtoys
                 timers_.erase(timer);
             }
         }
+
+       void EventLoop::setTimer(util::Timer timer)
+        {
+            bool toWakeup = false;
+            {
+                std::unique_lock<std::mutex> lock(mutex_);
+                if(timers_.empty() || *timers_.begin() > timer)
+                {
+                    timers_.insert(std::move(timer));
+                    toWakeup = true;
+                }
+                else
+                {
+                    timers_.insert(std::move(timer));
+                }
+            }
+            if(toWakeup)
+                wakeup();
+        }
+
+        void EventLoop::runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb) 
+        {
+            setTimer(util::Timer(t, cb));
+        }
+
+        void EventLoop::runAt(const std::chrono::steady_clock::time_point& t, 
+                              const std::chrono::milliseconds& interval, 
+                              std::function<void()> cb)
+        {
+            setTimer(util::Timer(t, interval, cb));
+        }
+
+        void EventLoop::runEvery(const std::chrono::milliseconds& interval, std::function<void()> cb)
+        {
+            setTimer(util::Timer(std::chrono::steady_clock::now() + interval, interval, cb));
+        }
+
+        void EventLoop::runEvery(const std::chrono::steady_clock::time_point& t, 
+                                 const std::chrono::milliseconds& interval, 
+                                 std::function<void()> cb)
+        {
+            setTimer(util::Timer(t, interval, cb));
+        }
+        
+        void EventLoop::runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb)
+        {
+            setTimer(util::Timer(std::chrono::steady_clock::now() + interval, cb));
+        }
+        void EventLoop::runAfter(const std::chrono::milliseconds& t, 
+                                 const std::chrono::milliseconds& interval, 
+                                 std::function<void()> cb)
+        {
+            setTimer(util::Timer(std::chrono::steady_clock::now() + t, interval, cb));
+        }
+
     }
 }

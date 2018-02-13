@@ -100,7 +100,7 @@ namespace rtoys
             else
             {
                 /* error */
-                log_error << "unknown channel events";
+                /* log_error << "unknown channel events"; */
                 disableAll();
             }
         }

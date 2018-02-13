@@ -25,10 +25,19 @@ namespace rtoys
 
                 Self& operator()(const std::string& msg);
                 Self& operator()(const char* msg);
+                Self& operator()(short n);
                 Self& operator()(int n);
                 Self& operator()(long n);
                 Self& operator()(long long int n);
                 Self& operator()(std::size_t n);
+                Self& operator()(double n);
+
+                template <class T, class... Args>
+                Self& operator()(const T& msg, Args... args)
+                {
+                   buffer_.append(msg); 
+                   return this->operator()(args...);
+                }
             public:
                 std::size_t size() const ;
                 std::string retrieveAll();

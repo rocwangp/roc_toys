@@ -25,7 +25,7 @@ namespace rtoys
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_write_type;
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_close_type;
             public:
-                Connection();
+                Connection(EventLoop* loop = nullptr);
                 Connection(EventLoop* loop, int fd);
                 ~Connection(); 
 
@@ -40,10 +40,11 @@ namespace rtoys
 
                 void connect(const std::string& ip, unsigned short port);
                 void send(const std::string& msg);
+                void close();
 
                 std::string readAll();
+                std::string readUtil(const std::string& boundary);
 
-                std::shared_ptr<Buffer> readBuffer();
             private:
                 EventLoop *loop_;
                 std::unique_ptr<Channel> channel_;

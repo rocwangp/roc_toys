@@ -1,17 +1,18 @@
 #include "../../net/tcpserver.h"
+#include "../../net/eventloop.h"
 #include <iostream>
 int main()
 {
-    rtoys::net::TcpServer server("localhost", 9999);
+    rtoys::net::EventLoop base;
     auto now = std::chrono::steady_clock::now();
-    server.runAt(now + std::chrono::seconds(10),
+    base.runAt(now + std::chrono::seconds(10),
                 [&now]
                 {
                     log_info("once timer run...");
                     log_info << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - now).count(); 
                 }
             );
-    auto timer = server.runEvery(now + std::chrono::seconds(5),
+    base.runEvery(now + std::chrono::seconds(5),
                     std::chrono::seconds(5),
                     [&now]
                     {
@@ -19,14 +20,14 @@ int main()
                         log_info <<  std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - now).count();
                     }
                 );
-    server.runAfter(std::chrono::seconds(7),
-                    [&server, &now, &timer]
+    base.runAfter(std::chrono::seconds(7),
+                    [&now]
                     {
-                        server.cancel(timer); 
                         log_info("after timer run...");
                         log_info <<  std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - now).count();
                     }
                 );
-    server.start();
+    
+    base.loop();
     return 0;
 }

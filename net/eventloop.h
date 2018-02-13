@@ -35,8 +35,20 @@ namespace rtoys
                 void appendPendingFunc(pending_func_type func);
                 void wakeup();
             public:
-                void runAt(const util::Timer& timer);
                 void cancel(const util::Timer& timer);
+
+                void runAt(const std::chrono::steady_clock::time_point& t, std::function<void()> cb);
+                void runAt(const std::chrono::steady_clock::time_point& t, const std::chrono::milliseconds& interval, std::function<void()> cb);
+
+                void runEvery(const std::chrono::milliseconds& interval, std::function<void()> cb);
+                void runEvery(const std::chrono::steady_clock::time_point& t, 
+                              const std::chrono::milliseconds& interval, 
+                              std::function<void()> cb);
+
+                void runAfter(const std::chrono::milliseconds& interval, std::function<void()> cb);
+                void runAfter(const std::chrono::milliseconds& t, const std::chrono::milliseconds& interval, std::function<void()> cb);
+
+                void setTimer(util::Timer timer);
 
             private:
                 std::unique_ptr<Poller> poller_; 

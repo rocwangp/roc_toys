@@ -1,11 +1,13 @@
 #include "../../net/connection.h"
+#include "../../net/eventloop.h"
 #include <thread>
 #include <string>
 #include <iostream>
 
 int main()
 {
-    auto conn = std::make_shared<rtoys::net::Connection>();
+    rtoys::net::EventLoop base;
+    auto conn = std::make_shared<rtoys::net::Connection>(&base);
     conn->onRead(
                 [](const auto& connPtr)
                 {
@@ -23,6 +25,7 @@ int main()
                 }
             );
     conn->connect("localhost", 9999);
+    base.loop();
     t.join();
     return 0;
 }

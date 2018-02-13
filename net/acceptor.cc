@@ -25,8 +25,11 @@ namespace rtoys
                                     fd = rtoys::ip::tcp::socket::accept(channel_->fd());
                                     rtoys::ip::tcp::socket::close(fd);
                                     idleFd_ = util::io::open("dev/null");
+                                    fd = -1;
+                                    log_error("fd use out...");
                                 }
-                                this->acceptCallBack_(fd);
+                                if(acceptCallBack_)
+                                    this->acceptCallBack_(fd);
                             }
                         );
             rtoys::ip::tcp::socket::reuse_port(channel_->fd());
@@ -44,7 +47,7 @@ namespace rtoys
 
         void Acceptor::start()
         {
-            log_trace;
+            /* log_trace; */
             channel_->enableRead();
         }
     }

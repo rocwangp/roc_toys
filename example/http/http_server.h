@@ -14,8 +14,8 @@ struct Request
 {
     std::string method, source, version;
     std::unordered_map<std::string, std::string> headers;
-    std::stringstream content;
-    /* std::shared_ptr<std::stringstream> context; */
+    std::shared_ptr<std::stringstream> content;
+    std::smatch match;
 };
 
 class HttpServer
@@ -41,13 +41,18 @@ class HttpServer
                 resources_.emplace_back(it);
 
             server_.onConnRead(
-                        [this](const conn_pointer conn)
+                        [this](const conn_pointer& conn)
                         {
-                            std::stringstream stream(conn->readBuffer()->readUtil("\r\n\r\n"));
+                            log_trace;
+                            std::stringstream stream(conn->readUtil("\r\n\r\n"));
                             Request request = parseRequest(stream);
                             /* request.context = std::make_shared<std::stringstream>(stream); */
-                            request.content = std::move(stream);
+                            request.content = std::make_shared<std::stringstream>(conn->readAll());
                             respond(conn, request);
+                            /* if(!request.headers.count("Connection") || request.headers["Connection"] != "keep-alive") */
+                            /* { */
+                            /*     conn->close(); */
+                            /* } */
                         }
                     );
 
@@ -55,12 +60,12 @@ class HttpServer
         }
 
         resource_type& resource() { return resource_; }
-        resource_type& defaulResource() { return defaultResource_; }
+        resource_type& defaultResource() { return defaultResource_; }
 
     private:
         Request parseRequest(std::stringstream& stream)
         {
-            std::regex e("^([^ ]*) ([^ ]*) HTTP/(^ ]*)\r\n$");
+            std::regex e("^([^ ]*) ([^ ]*) HTTP/([^ ]*)$");
             std::smatch match;
 
             Request request;
@@ -72,13 +77,15 @@ class HttpServer
                 request.method = match[1];
                 request.source = match[2];
                 request.version = match[3];
-
-                e = "^(^:]*): ?(.*)$";
-                std::getline(stream, line);
-                line.pop_back();
+                
+                log_debug << match[1] << " " << match[2] << " " << match[3];
+                
+                e = "^([^:]*): ?(.*)$";
                 bool matched = false;
                 do
                 {
+                    std::getline(stream, line);
+                    line.pop_back();
                     matched = std::regex_match(line, match, e);
                     if(matched)
                         request.headers[match[1]] = match[2];
@@ -87,16 +94,18 @@ class HttpServer
             return request;
         }
 
-        void respond(const conn_pointer& conn, const Request& request)
+        void respond(const conn_pointer& conn, Request& request)
         {
             for(auto it : resources_)
             {
                 std::smatch match;
                 std::regex e(it->first);
-                if(std::regex_match(request.source, match, e))
+                if(std::regex_match(request.source, match, e) && it->second.count(request.method))
                 {
+                    request.match = std::move(match); 
                     std::stringstream response; 
                     it->second[request.method](response, request);
+                    log_debug << response.str();
                     conn->send(response.str()); 
                     break;
                 }

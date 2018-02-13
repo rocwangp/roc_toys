@@ -1,4 +1,5 @@
 #include "timer.h"
+#include "logging.h"
 
 namespace rtoys
 {

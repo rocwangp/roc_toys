@@ -57,13 +57,22 @@ namespace rtoys
                     oss << n;
                     append(oss.str());
                 }
+
+                void append(double n)
+                {
+                    std::stringstream oss;
+                    oss << n;
+                    append(oss.str());
+                }
                 void appendBytes(int bytes)
                 {
                     writeIdx_ += bytes;
                 }
                 void retrieveBytes(int bytes)
                 {
-                    readIdx_ -= bytes;
+                    readIdx_ += bytes;
+                    if(begin() == end())
+                        reset();
                 }
                 void enableSpace(int bytes)
                 {
@@ -97,11 +106,11 @@ namespace rtoys
 
                 std::string readUtil(const std::string& boundary)
                 {
-                    auto it = std::search(buffer_.begin(), buffer_.end(), boundary.begin(), boundary.end());  
+                    auto it = std::search(begin(), end(), boundary.begin(), boundary.end());  
                     std::string info;
-                    if(it != buffer_.end())
+                    if(it != end())
                     {
-                        info.assign(buffer_.begin(), it + boundary.size()); 
+                        info.assign(begin(), it + boundary.size()); 
                         retrieveBytes(info.size());
                     }
                     return info;
