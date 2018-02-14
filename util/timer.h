@@ -22,6 +22,7 @@ namespace rtoys
                 Timer(const Timer& timer);
                 Timer(Timer&& timer);
                 
+                Timer& operator=(const Timer& timer);
 
                 bool periodic() const;
                 void run() const;

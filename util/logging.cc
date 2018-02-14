@@ -162,6 +162,12 @@ namespace rtoys
             buffer_.append(static_cast<int>(n));
             return *this;
         }
+        LogStream& LogStream::operator()(unsigned short n)
+        {
+            buffer_.append(static_cast<int>(n));
+            return *this;
+        }
+
         LogStream& LogStream::operator()(int n)
         {
             buffer_.append(n);
@@ -172,7 +178,11 @@ namespace rtoys
             buffer_.append(static_cast<int>(n));
             return *this;
         }
-
+        LogStream& LogStream::operator()(unsigned long n)
+        {
+            buffer_.append(static_cast<long long int>(n));
+            return *this;
+        }
         LogStream& LogStream::operator()(long long int n)
         {
             buffer_.append(n);

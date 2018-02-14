@@ -26,10 +26,11 @@ namespace rtoys
                 Self& operator()(const std::string& msg);
                 Self& operator()(const char* msg);
                 Self& operator()(short n);
+                Self& operator()(unsigned short n);
                 Self& operator()(int n);
                 Self& operator()(long n);
+                Self& operator()(unsigned long n);
                 Self& operator()(long long int n);
-                Self& operator()(std::size_t n);
                 Self& operator()(double n);
 
                 template <class T, class... Args>

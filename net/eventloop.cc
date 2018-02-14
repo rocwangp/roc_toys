@@ -35,6 +35,7 @@ namespace rtoys
             while(!quit_)
             {
                 int timeout = timers_.empty() ? -1 : timers_.begin()->milliseconds();
+                if(timeout < 0) timeout = -1;
                 poller_->wait(activeChannels_, timeout);                
 
                 for(auto& channel : activeChannels_)
@@ -44,20 +45,18 @@ namespace rtoys
                 for(auto&& func : pendingFuncs_)
                     func();
                 pendingFuncs_.clear();
-
-                const auto now = std::chrono::steady_clock::now();
                 for(auto it = timers_.begin(); it != timers_.end(); )
                 {
-                    if(*it > now)
+                    if(it->milliseconds() > 0)
                         break;
                     it->run();
-                    if(it->periodic())
+                    util::Timer timer = *it;
+                    it = timers_.erase(it);
+                    if(timer.periodic())
                     {
-                        util::Timer timer(*it);
                         timer.update();
                         timers_.insert(std::move(timer));
                     }
-                    timers_.erase(it++);
                 }
             }
         }
@@ -66,6 +65,7 @@ namespace rtoys
         {
             quit_ = true;
             wakeup(); 
+            log_info("wakeup");
         }
 
         void EventLoop::wakeup()

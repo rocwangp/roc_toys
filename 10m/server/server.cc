@@ -72,18 +72,23 @@ int main(int argc, char* argv[])
                     );
             servers.push_back(server);
         }
-        /* auto report = std::make_shared<Connection>(&loop); */
-        /* loop.runAfter(std::chrono::milliseconds(2000), */
-        /*               [&] */
-        /*               { */
-        /*                     report->connect("127.0.0.1", clientManPort); */ 
-        /*               }); */
-        /* loop.runEvery(std::chrono::milliseconds(2000), */
-        /*               [&] */
-        /*               { */
-        /*                   std::string msg(rtoys::util::format("pid %d connected %ld closed %ld recved %ld", ::getpid(), connected, closed, recved)); */
-        /*                   report->send(msg); */
-        /*               }); */
+        std::shared_ptr<Connection> report;
+        loop.runAfter(std::chrono::milliseconds(2000),
+                      [&]
+                      {
+                        log_info("try to connect to client ", clientManPort);
+                        report = std::make_shared<Connection>(&loop);
+                        report->connect("127.0.0.1", clientManPort);
+                        log_info("connect to client");
+                      });
+        loop.runAfter(std::chrono::milliseconds(3000),
+                      std::chrono::milliseconds(2000),
+                      [&]
+                      {
+                          std::string msg(rtoys::util::format("pid %d connected %ld closed %ld recved %ld", ::getpid(), connected, closed, recved));
+                          log_info(msg);
+                          report->send(msg);
+                      });
         
         log_info("done");
         loop.loop();
@@ -101,6 +106,7 @@ int main(int argc, char* argv[])
         master->onConnRead(
                     [&](const auto& conn)
                     {
+                        log_info("connRead");
                         rtoys::util::Slice slice(conn->readAll(), ' '); 
                         Report& report = reports[std::strtol(slice[1].c_str(), nullptr, 10)];
                         report.pid = std::strtol(slice[1].c_str(), nullptr, 10);

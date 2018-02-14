@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <atomic>
+#include <queue>
 #include <set>
 #include <map>
 #include <vector>
@@ -60,6 +61,7 @@ namespace rtoys
                 std::unique_ptr<util::PipeWatcher> watcher_;
                 std::unique_ptr<Channel> watchChannel_;
                 std::set<util::Timer> timers_;
+                /* std::priority_queue<util::Timer, std::vector<util::Timer>, std::greater<util::Timer>> timers_; */
         };
     }
 }

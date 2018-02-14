@@ -8,6 +8,13 @@ namespace rtoys
 {
     namespace net
     {
+        Connection::Connection(EventLoop* loop)
+            : loop_(loop),
+              readBuffer_(std::make_shared<Buffer>()),
+              writeBuffer_(std::make_shared<Buffer>())
+        {
+
+        }
         Connection::Connection(EventLoop* loop, int fd)
             : loop_(loop),
               channel_(std::make_unique<Channel>(loop, fd)),
@@ -73,6 +80,7 @@ namespace rtoys
             else
             {
                 int n = rtoys::ip::tcp::socket::write(channel_->fd(), msg);
+                log_info(n);
                 if(n < static_cast<int>(msg.size()))
                 {
                     n = std::max(n, 0);
@@ -100,15 +108,19 @@ namespace rtoys
         }
               
 
-        std::shared_ptr<Connection> Connection::connect(EventLoop* loop, const std::string& ip, unsigned short port)
+        void Connection::connect(const std::string& ip, unsigned short port)
         {
             int fd = rtoys::ip::tcp::socket::create_socket(rtoys::ip::tcp::socket::BLOCK);
             if(!::rtoys::ip::tcp::socket::connect(fd, ip, port))
+            {
+                log_error(ip, " ", port);
                 throw std::runtime_error("connect error");
+            }
             rtoys::ip::tcp::socket::set_nonblock(fd); 
-            auto conn = std::make_shared<Connection>(loop, ip, port);
-            conn->connEstablished();
-            return conn;
+            channel_.reset(new Channel(loop_, fd));
+            endpoint_.reset(rtoys::ip::tcp::address::v4(), fd),
+            name_ = (endpoint_.localAddrToString() + endpoint_.peerAddrToString()),
+            connEstablished();
         }
     }
 }

@@ -39,6 +39,15 @@ namespace rtoys
               periodic_(std::move(timer.periodic_))
         {  }
 
+        Timer& Timer::operator=(const Timer& timer)
+        {
+            time_ = timer.time_;
+            interval_ = timer.interval_;
+            cb_ = timer.cb_;
+            periodic_ = timer.periodic_;
+            return *this;
+        }
+
         void Timer::run() const
         {
             cb_();

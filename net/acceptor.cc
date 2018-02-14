@@ -40,8 +40,16 @@ namespace rtoys
             rtoys::ip::tcp::socket::reuse_port(channel_->fd());
             rtoys::ip::tcp::socket::reuse_address(channel_->fd());
             auto address = std::make_shared<rtoys::ip::tcp::address::v4>(ip, port);
-            rtoys::ip::tcp::socket::bind(channel_->fd(), address);
-            rtoys::ip::tcp::socket::listen(channel_->fd());
+            if(!rtoys::ip::tcp::socket::bind(channel_->fd(), address))
+            {
+                log_error(ip, " ", port);
+                throw std::runtime_error("bind error ");
+            }
+            if(!rtoys::ip::tcp::socket::listen(channel_->fd()))
+            {
+                log_error(ip, " ", port);
+                throw std::runtime_error("listen error");
+            }
         }
 
         Acceptor::~Acceptor()

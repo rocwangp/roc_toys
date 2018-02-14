@@ -57,20 +57,24 @@ int main(int argc, char* argv[])
         int connected = 0;
         int closed = 0;
 
+        int build = 0;
         std::vector<std::shared_ptr<Connection>> conns;
         for(int k = 0; k < static_cast<int>(createSec * 10); ++k)
         {
             loop.runAfter(std::chrono::milliseconds(k * 100),
-                         [&]
+                         [&, k]
                          {
+                            /* log_info(k, " " , "create connection"); */
                             int c = connCnt / createSec / 10;
                             for(int i = 0; i < c; ++i)
                             {
                                 short int port = beginPort + (i % (endPort - beginPort));
+                                /* log_info(host, " " , port); */
                                 auto conn = std::make_shared<Connection>(&loop);
                                 conn->onBuild(
                                             [&](const auto&)
                                             {
+                                                /* log_info(++build); */
                                                 ++connected;
                                             }
                                         );
@@ -90,15 +94,19 @@ int main(int argc, char* argv[])
                                             }
                                         );
                                 conn->connect(host, port);
-                                log_info(host, port);
                                 conns.push_back(conn);
                             }
                          });
         }
 
         log_info("done");
-        auto report = std::make_shared<Connection>(&loop);
-        report->connect("127.0.0.1", serverManPort);
+        std::shared_ptr<Connection> report;
+        loop.runAfter(std::chrono::milliseconds(2000),
+                     [&]
+                     {
+                        report = std::make_shared<Connection>(&loop);
+                        report->connect("127.0.0.1", serverManPort);
+                     });
         loop.runEvery(std::chrono::milliseconds(3000),
                         [&]
                         {
@@ -112,35 +120,35 @@ int main(int argc, char* argv[])
     }
     else
     {
-        /* std::unordered_map<int, Report> reports; */
-        /* auto master = std::make_shared<TcpServer>(&loop, "127.0.0.1", managePort); */
-        /* master->onConnBuild( */
-        /*             [&](const auto&) */
-        /*             { */
-        /*                 log_info("server connection"); */
-        /*             } */
-        /*         ); */
-        /* master->onConnRead( */
-        /*             [&](const auto& conn) */
-        /*             { */
-        /*                 rtoys::util::Slice slice(conn->readAll(), ' '); */ 
-        /*                 Report& report = reports[std::strtol(slice[1].c_str(), nullptr, 10)]; */
-        /*                 report.pid = std::strtol(slice[1].c_str(), nullptr, 10); */
-        /*                 report.connected = std::strtoll(slice[3].c_str(), nullptr, 10); */
-        /*                 report.closed = std::strtoll(slice[5].c_str(), nullptr, 10); */
-        /*                 report.recved = std::strtoll(slice[7].c_str(), nullptr, 10); */
-        /*             } */
-        /*         ); */
-        /* loop.runEvery(std::chrono::steady_clock::now(), */
-        /*                  std::chrono::milliseconds(3000), */
-        /*                 [&] */
-        /*                 { */
-        /*                     for(auto& p : reports) */
-        /*                     { */
-        /*                         ::printf("pid %6d connected %6ld closed %6ld recved %6ld\n", */ 
-        /*                                 p.second.pid, p.second.connected, p.second.closed, p.second.recved); */    
-        /*                     } */
-        /*                 }); */
+        std::unordered_map<int, Report> reports;
+        log_info(managePort);
+        auto master = std::make_shared<TcpServer>(&loop, "127.0.0.1", managePort);
+        master->onConnBuild(
+                    [&](const auto&)
+                    {
+                        log_info("server connection");
+                    }
+                );
+        master->onConnRead(
+                    [&](const auto& conn)
+                    {
+                        rtoys::util::Slice slice(conn->readAll(), ' '); 
+                        Report& report = reports[std::strtol(slice[1].c_str(), nullptr, 10)];
+                        report.pid = std::strtol(slice[1].c_str(), nullptr, 10);
+                        report.connected = std::strtoll(slice[3].c_str(), nullptr, 10);
+                        report.closed = std::strtoll(slice[5].c_str(), nullptr, 10);
+                        report.recved = std::strtoll(slice[7].c_str(), nullptr, 10);
+                    }
+                );
+        loop.runEvery(std::chrono::milliseconds(3000),
+                        [&]
+                        {
+                            for(auto& p : reports)
+                            {
+                                ::printf("pid %6d connected %6ld closed %6ld recved %6ld\n", 
+                                        p.second.pid, p.second.connected, p.second.closed, p.second.recved);    
+                            }
+                        });
         loop.loop();
 
     }

@@ -22,6 +22,7 @@ namespace rtoys
             public:
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_cb_type;;
             public:
+                Connection(EventLoop* loop);
                 Connection(EventLoop* loop, int fd);
                 ~Connection(); 
 
@@ -34,7 +35,7 @@ namespace rtoys
                 void onWrite(conn_cb_type cb) { writecb_ = cb; }
                 void onClose(conn_cb_type cb) { closecb_ = cb; }
 
-                static std::shared_ptr<Connection> connect(EventLoop* loop, const std::string& ip, unsigned short port);
+                void connect(const std::string& ip, unsigned short port);
                 void send(const std::string& msg);
                 void close();
 
