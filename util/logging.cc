@@ -156,7 +156,11 @@ namespace rtoys
             buffer_.append(msg);
             return *this;
         }
-
+        LogStream& LogStream::operator()(char* msg)
+        {
+            buffer_.append(msg);
+            return *this;
+        }
         LogStream& LogStream::operator()(short n)
         {
             buffer_.append(static_cast<int>(n));

@@ -8,20 +8,25 @@ namespace rtoys
 {
     namespace net
     {
+        using namespace rtoys::ip::tcp;
+
         Connection::Connection(EventLoop* loop)
             : loop_(loop),
               readBuffer_(std::make_shared<Buffer>()),
-              writeBuffer_(std::make_shared<Buffer>())
+              writeBuffer_(std::make_shared<Buffer>()),
+              connInterval_(std::chrono::milliseconds(1000))
         {
 
         }
+
         Connection::Connection(EventLoop* loop, int fd)
             : loop_(loop),
               channel_(std::make_unique<Channel>(loop, fd)),
               endpoint_(rtoys::ip::tcp::address::v4(), fd),
               name_(endpoint_.localAddrToString() + endpoint_.peerAddrToString()),
               readBuffer_(std::make_shared<Buffer>()),
-              writeBuffer_(std::make_shared<Buffer>())
+              writeBuffer_(std::make_shared<Buffer>()),
+              connInterval_(std::chrono::milliseconds(1000))
         {
 
         }
@@ -36,25 +41,23 @@ namespace rtoys
             channel_->onRead(
                             [this]
                             {
-                                int n = rtoys::ip::tcp::socket::read(channel_->fd(), readBuffer_);
+                                int n = socket::read(channel_->fd(), readBuffer_);
                                 if(n <= 0)
                                     close(); 
                                 else 
                                 {
                                     readBuffer_->appendBytes(n);
-                                    auto self(shared_from_this());
                                     if(readcb_)
-                                        readcb_(self);
+                                        readcb_(shared_from_this());
                                 }
                             }
                         );
             channel_->onWrite(
                             [this]
                             {
-                                auto self(shared_from_this());
                                 if(writecb_)
-                                    writecb_(self);
-                                int n = rtoys::ip::tcp::socket::write(channel_->fd(), writeBuffer_);
+                                    writecb_(shared_from_this());
+                                int n = socket::write(channel_->fd(), writeBuffer_);
                                 if(n == writeBuffer_->size())
                                     channel_->disableWrite();
                                 this->writeBuffer_->appendBytes(n);
@@ -66,9 +69,9 @@ namespace rtoys
                                 close(); 
                             }
                         );
+            channel_->enableRead();
             if(buildcb_)
                 buildcb_(shared_from_this());
-            channel_->enableRead();
         }
 
         void Connection::send(const std::string& msg)
@@ -79,8 +82,7 @@ namespace rtoys
             }
             else
             {
-                int n = rtoys::ip::tcp::socket::write(channel_->fd(), msg);
-                log_info(n);
+                int n = socket::write(channel_->fd(), msg);
                 if(n < static_cast<int>(msg.size()))
                 {
                     n = std::max(n, 0);
@@ -110,15 +112,23 @@ namespace rtoys
 
         void Connection::connect(const std::string& ip, unsigned short port)
         {
-            int fd = rtoys::ip::tcp::socket::create_socket(rtoys::ip::tcp::socket::BLOCK);
-            if(!::rtoys::ip::tcp::socket::connect(fd, ip, port))
+            int fd = socket::block_socket();
+            if(!socket::connect(fd, ip, port))
             {
-                log_error(ip, " ", port);
-                throw std::runtime_error("connect error");
+                log_error(ip, port, std::strerror(errno));
+                ::close(fd);
+                loop_->runAfter(connInterval_,
+                                [this, ip, port]
+                                {
+                                    log_info("reconnct");
+                                    connect(ip, port);
+                                }
+                            );
+                return;
             }
-            rtoys::ip::tcp::socket::set_nonblock(fd); 
             channel_.reset(new Channel(loop_, fd));
-            endpoint_.reset(rtoys::ip::tcp::address::v4(), fd),
+            socket::set_nonblock(fd); 
+            endpoint_.reset(address::v4(), fd),
             name_ = (endpoint_.localAddrToString() + endpoint_.peerAddrToString()),
             connEstablished();
         }

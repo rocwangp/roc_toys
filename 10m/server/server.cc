@@ -1,6 +1,4 @@
-#include "../../net/tcpserver.h"
-#include "../../net/eventloop.h"
-#include "../../util/slice.h"
+#include "../../rtoys.h"
 
 #include <iostream>
 #include <string>
@@ -20,6 +18,11 @@ struct Report
     long int recved;
 };
 
+int toInt(const char* str)
+{
+    return std::strtol(str, nullptr, 10);
+}
+
 int main(int argc, char* argv[])
 {
     if(argc < 5)
@@ -27,11 +30,12 @@ int main(int argc, char* argv[])
         std::cout << "usage: " << argv[0] << " <begin port> <end port> <processes> <server managed port> <client managed port>" << std::endl;
         return 1;
     }
-    int beginPort = std::strtol(argv[1], nullptr, 10);
-    int endPort = std::strtol(argv[2], nullptr, 10);
-    int processes = std::strtol(argv[3], nullptr, 10);
-    int managePort = std::strtol(argv[4], nullptr, 10);
-    int clientManPort = std::strtol(argv[5], nullptr, 10);
+    int beginPort = toInt(argv[1]);
+    int endPort = toInt(argv[2]);
+    int processes = toInt(argv[3]);
+    int managePort = toInt(argv[4]);
+    int clientManPort = toInt(argv[5]);
+    log_info(beginPort,  endPort,  processes,  managePort,  clientManPort);
     int pid = 1;
     for(int i = 0; i < processes; ++i)
     {
@@ -40,19 +44,19 @@ int main(int argc, char* argv[])
             break;
     }
 
-    log_info(beginPort, " ", endPort, " ", processes, " ", managePort, " ", clientManPort);
     EventLoop loop;
     if(pid == 0)
     {
-        ::sleep(1);
+        int build = 0;
         std::vector<std::shared_ptr<TcpServer>> servers;
         long connected = 0, closed = 0, recved = 0;
         for(int port = beginPort; port <= endPort; ++port)
         {
-            auto server = std::make_shared<TcpServer>(&loop, "localhost", port);
+            auto server = std::make_shared<TcpServer>(&loop, "127.0.0.1", port);
             server->onConnBuild(
-                        [&](const auto&)
+                        [&, port](const auto&)
                         {
+                            log_info(++build, port);
                             ++connected; 
                         }
                     );
@@ -66,29 +70,24 @@ int main(int argc, char* argv[])
             server->onConnClose(
                         [&](const auto&)
                         {
-                            log_info("close");
                             ++closed;
                         }
                     );
             servers.push_back(server);
+            log_info(port);
         }
-        std::shared_ptr<Connection> report;
-        loop.runAfter(std::chrono::milliseconds(2000),
-                      [&]
-                      {
-                        log_info("try to connect to client ", clientManPort);
-                        report = std::make_shared<Connection>(&loop);
-                        report->connect("127.0.0.1", clientManPort);
-                        log_info("connect to client");
-                      });
-        loop.runAfter(std::chrono::milliseconds(3000),
-                      std::chrono::milliseconds(2000),
-                      [&]
-                      {
-                          std::string msg(rtoys::util::format("pid %d connected %ld closed %ld recved %ld", ::getpid(), connected, closed, recved));
-                          log_info(msg);
-                          report->send(msg);
-                      });
+        /* Connection report(&loop); */
+        /* report.setConnInterval(std::chrono::milliseconds(1000)); */
+        /* log_info("done"); */
+        /* report.connect("127.0.0.1", clientManPort); */
+
+        /* loop.runAfter(std::chrono::milliseconds(2000), std::chrono::milliseconds(2000), */
+        /*               [&] */
+        /*               { */
+        /*                   std::string msg(rtoys::util::format("pid %d connected %ld closed %ld recved %ld", */ 
+        /*                                   ::getpid(), connected, closed, recved)); */
+        /*                   report.send(msg); */
+        /*               }); */
         
         log_info("done");
         loop.loop();
@@ -96,17 +95,12 @@ int main(int argc, char* argv[])
     else
     {
         std::unordered_map<int, Report> reports;
-        auto master = std::make_shared<TcpServer>(&loop, "127.0.0.1", managePort);
-        master->onConnBuild(
-                    [&](const auto&)
-                    {
-                        log_info("client connection");
-                    }
-                );
-        master->onConnRead(
+        TcpServer master(&loop, "127.0.0.1", managePort);
+        master.onConnBuild( [&](const auto&) { log_info("client connection"); });
+        master.onConnRead(
                     [&](const auto& conn)
                     {
-                        log_info("connRead");
+                        /* log_info("connRead"); */
                         rtoys::util::Slice slice(conn->readAll(), ' '); 
                         Report& report = reports[std::strtol(slice[1].c_str(), nullptr, 10)];
                         report.pid = std::strtol(slice[1].c_str(), nullptr, 10);
@@ -115,11 +109,9 @@ int main(int argc, char* argv[])
                         report.recved = std::strtoll(slice[7].c_str(), nullptr, 10);
                     }
                 );
-        loop.runEvery(std::chrono::steady_clock::now(),
-                         std::chrono::milliseconds(3000),
+        loop.runEvery(std::chrono::milliseconds(3000),
                         [&]
                         {
-                            log_trace;
                             for(auto& p : reports)
                             {
                                 ::printf("pid %6d connected %6ld closed %6ld recved %6ld\n", 

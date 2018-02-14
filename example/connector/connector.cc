@@ -1,5 +1,4 @@
-#include "../../net/connection.h"
-#include "../../net/eventloop.h"
+#include "../../rtoys.h"
 #include <thread>
 #include <string>
 #include <iostream>

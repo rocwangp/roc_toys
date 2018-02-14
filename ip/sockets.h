@@ -101,19 +101,29 @@ namespace rtoys
             {
                 public:
                     enum SOCKET_STATE { BLOCK, NON_BLOCK };
-                    enum {MAX_LISTEN_NUMS = 1000};
+                    enum {MAX_LISTEN_NUMS = 1000000};
                     static int create_socket(SOCKET_STATE state = NON_BLOCK)
                     {
                         if(state == SOCKET_STATE::NON_BLOCK)
                             return nonblock_socket();
                         else
-                            return ::socket(AF_INET, SOCK_STREAM, 0);
+                            return block_socket();
+                    }
+                    static int block_socket()
+                    {
+                        int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+                        reuse_port(fd);
+                        reuse_address(fd);
+                        return fd;
                     }
                     static int nonblock_socket()
                     {
                         int fd = ::socket(AF_INET, SOCK_STREAM, 0);
                         int opt = 1;
                         ::setsockopt(fd, SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(opt));
+                        reuse_port(fd);
+                        reuse_address(fd);
+
                         return fd;
                     }
                     static void close(int fd)

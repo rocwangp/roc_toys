@@ -1,5 +1,4 @@
-#include "../../net/tcpserver.h"
-#include "../../net/eventloop.h"
+#include "../../rtoys.h"
 #include <iostream>
 int main()
 {
@@ -20,7 +19,7 @@ int main()
                      [i]
                      {
                         int p = ::getpid(); 
-                        log_info(p, " ", i);
+                        log_info(p, i);
                      });
     }
     }

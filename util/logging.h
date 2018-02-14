@@ -24,6 +24,7 @@ namespace rtoys
                 Self& operator<<(std::size_t n);
 
                 Self& operator()(const std::string& msg);
+                Self& operator()(char* msg);
                 Self& operator()(const char* msg);
                 Self& operator()(short n);
                 Self& operator()(unsigned short n);
@@ -37,6 +38,7 @@ namespace rtoys
                 Self& operator()(const T& msg, Args... args)
                 {
                    buffer_.append(msg); 
+                   buffer_.append(" " );
                    return this->operator()(args...);
                 }
             public:

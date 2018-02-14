@@ -1,7 +1,4 @@
-#include "../../net/tcpserver.h"
-#include "../../net/connection.h"
-#include "../../net/eventloop.h"
-#include "../../util/slice.h"
+#include "../../rtoys.h"
 
 #include <vector>
 #include <string>
@@ -37,6 +34,7 @@ int main(int argc, char* argv[])
     int managePort = std::atoi(argv[c++]);
     int serverManPort = std::atoi(argv[c++]);
 
+    log_info(host,  beginPort, endPort,  connCnt, createSec, processes, managePort, serverManPort);
     int pid = 1;
     for(int i = 0; i < processes; ++i)
     {
@@ -48,7 +46,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    log_info(host, " ", beginPort," ", endPort, " ", connCnt," ", createSec," ", processes," ", managePort," ", serverManPort);
     EventLoop loop;
     if(pid == 0)
     {
@@ -64,17 +61,17 @@ int main(int argc, char* argv[])
             loop.runAfter(std::chrono::milliseconds(k * 100),
                          [&, k]
                          {
-                            /* log_info(k, " " , "create connection"); */
+                            log_info(k);
                             int c = connCnt / createSec / 10;
                             for(int i = 0; i < c; ++i)
                             {
                                 short int port = beginPort + (i % (endPort - beginPort));
-                                /* log_info(host, " " , port); */
                                 auto conn = std::make_shared<Connection>(&loop);
+                                conn->setConnInterval(std::chrono::milliseconds(500));
                                 conn->onBuild(
                                             [&](const auto&)
                                             {
-                                                /* log_info(++build); */
+                                                log_info(++build, port);
                                                 ++connected;
                                             }
                                         );
@@ -99,37 +96,26 @@ int main(int argc, char* argv[])
                          });
         }
 
-        log_info("done");
-        std::shared_ptr<Connection> report;
-        loop.runAfter(std::chrono::milliseconds(2000),
-                     [&]
-                     {
-                        report = std::make_shared<Connection>(&loop);
-                        report->connect("127.0.0.1", serverManPort);
-                     });
-        loop.runEvery(std::chrono::milliseconds(3000),
-                        [&]
-                        {
-                            std::string msg(rtoys::util::format("pid %d connected %ld send %ld recved %ld", getpid(), connected, send, recv));
-                            log_info(msg);
-                            report->send(msg);
+        /* log_info("done"); */
+        /* Connection report(&loop); */
+        /* report.connect("127.0.0.1", serverManPort); */
+        /* loop.runEvery(std::chrono::milliseconds(3000), */
+        /*                 [&] */
+        /*                 { */
+        /*                     std::string msg(rtoys::util::format("pid %d connected %ld send %ld recved %ld", */ 
+        /*                                     ::getpid(), connected, send, recv)); */
+        /*                     report.send(msg); */
                        
-                        });
-        log_info("done");
+        /*                 }); */
+        /* log_info("done"); */
         loop.loop();
     }
     else
     {
         std::unordered_map<int, Report> reports;
-        log_info(managePort);
-        auto master = std::make_shared<TcpServer>(&loop, "127.0.0.1", managePort);
-        master->onConnBuild(
-                    [&](const auto&)
-                    {
-                        log_info("server connection");
-                    }
-                );
-        master->onConnRead(
+        TcpServer master(&loop, "127.0.0.1", managePort);
+        master.onConnBuild( [&](const auto&) { log_info("server connection"); });
+        master.onConnRead(
                     [&](const auto& conn)
                     {
                         rtoys::util::Slice slice(conn->readAll(), ' '); 

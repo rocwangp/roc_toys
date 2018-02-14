@@ -6,7 +6,7 @@
 
 #include <memory>
 #include <string>
-
+#include <chrono>
 
 namespace rtoys
 {
@@ -39,6 +39,7 @@ namespace rtoys
                 void send(const std::string& msg);
                 void close();
 
+                void setConnInterval(const std::chrono::milliseconds& interval) { connInterval_ = interval; }
                 std::string readAll();
                 std::string readUtil(const std::string& boundary);
 
@@ -50,6 +51,7 @@ namespace rtoys
                 std::shared_ptr<Buffer> readBuffer_;
                 std::shared_ptr<Buffer> writeBuffer_;
                 conn_cb_type buildcb_, readcb_, writecb_, closecb_;
+                std::chrono::milliseconds connInterval_;
         };
     }
 }

@@ -1,5 +1,4 @@
-#include "../../net/tcpserver.h"
-#include "../../net/connection.h"
+#include "../../rtoys.h"
 
 #include "chat_message.h"
 
@@ -45,14 +44,14 @@ class ChatServer
 {
     public:
         ChatServer(unsigned short port = 9999)
-            : server_("localhost", port)
+            : server_(&base_, "localhost", port)
         {
             setCallBack(); 
         }
 
         void start()
         {
-            server_.start();
+            base_.loop();
         }
 
         void setCallBack()
@@ -77,6 +76,7 @@ class ChatServer
         }
 
     private:
+        EventLoop base_;
         TcpServer server_;        
         ChatRoom room_;
 };

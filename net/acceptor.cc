@@ -10,44 +10,23 @@ namespace rtoys
 {
     namespace net
     {
+        using namespace rtoys::ip::tcp;
+
         Acceptor::Acceptor(EventLoop* loop, const std::string& ip, unsigned short port)
             : loop_(loop),
               channel_(std::make_unique<Channel>(loop)),
-              idleFd_(util::io::open("dev/null"))
+              idleFd_(util::io::open("/dev/null"))
         {
-            channel_->onRead(
-                            [this]
-                            {
-                                int fd = rtoys::ip::tcp::socket::accept(channel_->fd());
-                                if(fd == -1)
-                                {
-                                    if(errno == EMFILE)
-                                    {
-                                        util::io::close(idleFd_);
-                                        fd = rtoys::ip::tcp::socket::accept(channel_->fd());
-                                        rtoys::ip::tcp::socket::close(fd);
-                                        idleFd_ = util::io::open("dev/null");
-                                        fd = -1;
-                                        log_error("fd use out...");
-                                    }
-                                    
-                                    return;
-                                }
-                                if(acceptCallBack_)
-                                    this->acceptCallBack_(fd);
-                            }
-                        );
-            rtoys::ip::tcp::socket::reuse_port(channel_->fd());
-            rtoys::ip::tcp::socket::reuse_address(channel_->fd());
-            auto address = std::make_shared<rtoys::ip::tcp::address::v4>(ip, port);
-            if(!rtoys::ip::tcp::socket::bind(channel_->fd(), address))
+            if(!rtoys::ip::tcp::socket::bind(channel_->fd(), std::make_shared<address::v4>(ip, port)))
             {
-                log_error(ip, " ", port);
+                log_error(ip, port);
+                ::perror("bind error)");
                 throw std::runtime_error("bind error ");
             }
             if(!rtoys::ip::tcp::socket::listen(channel_->fd()))
             {
-                log_error(ip, " ", port);
+                log_error(ip, port);
+                ::perror("listen error)");
                 throw std::runtime_error("listen error");
             }
         }
@@ -60,7 +39,25 @@ namespace rtoys
 
         void Acceptor::start()
         {
-            /* log_trace; */
+             channel_->onRead(
+                            [this]
+                            {
+                                int fd = socket::accept(channel_->fd());
+                                if(fd == -1)
+                                {
+                                    if(errno == EMFILE)
+                                    {
+                                        log_error("file descriptor use out...");
+                                        util::io::close(idleFd_);
+                                        socket::close(socket::accept(channel_->fd()));
+                                        idleFd_ = util::io::open("/dev/null");
+                                    }
+                                    return;
+                                }
+                                if(acceptCallBack_)
+                                    acceptCallBack_(fd);
+                            }
+                        );
             channel_->enableRead();
         }
     }

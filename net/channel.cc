@@ -11,6 +11,7 @@ namespace rtoys
         Channel::Channel(EventLoop* loop)
             : Channel(loop, rtoys::ip::tcp::socket::nonblock_socket())
         {  }
+
         Channel::Channel(EventLoop* loop, int fd)
             : loop_(loop),
               fd_(fd),

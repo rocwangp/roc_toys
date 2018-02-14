@@ -16,12 +16,7 @@ namespace rtoys
               watcher_(std::make_unique<util::PipeWatcher>()),
               watchChannel_(std::make_unique<Channel>(this, watcher_->readFd()))
         {
-            watchChannel_->onRead(
-                            [this]
-                            {
-                                this->watcher_->clear();
-                            }
-                        );
+            watchChannel_->onRead( [this] { this->watcher_->clear(); });
         }
 
         EventLoop::~EventLoop()
@@ -35,7 +30,6 @@ namespace rtoys
             while(!quit_)
             {
                 int timeout = timers_.empty() ? -1 : timers_.begin()->milliseconds();
-                if(timeout < 0) timeout = -1;
                 poller_->wait(activeChannels_, timeout);                
 
                 for(auto& channel : activeChannels_)
@@ -45,18 +39,18 @@ namespace rtoys
                 for(auto&& func : pendingFuncs_)
                     func();
                 pendingFuncs_.clear();
+
                 for(auto it = timers_.begin(); it != timers_.end(); )
                 {
-                    if(it->milliseconds() > 0)
-                        break;
+                    if(it->milliseconds() > 0) break;
                     it->run();
-                    util::Timer timer = *it;
-                    it = timers_.erase(it);
-                    if(timer.periodic())
+                    if(it->periodic())
                     {
+                        util::Timer timer = *it;
                         timer.update();
                         timers_.insert(std::move(timer));
                     }
+                    it = timers_.erase(it);
                 }
             }
         }
@@ -65,7 +59,6 @@ namespace rtoys
         {
             quit_ = true;
             wakeup(); 
-            log_info("wakeup");
         }
 
         void EventLoop::wakeup()
