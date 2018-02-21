@@ -10,14 +10,14 @@ namespace rtoys
 {
     namespace net
     {
-        using namespace rtoys::ip::tcp;
+        using namespace rtoys::ip;
 
         Acceptor::Acceptor(EventLoop* loop, const std::string& ip, unsigned short port)
             : loop_(loop),
               channel_(std::make_unique<Channel>(loop)),
               idleFd_(util::io::open("/dev/null"))
         {
-            if(!rtoys::ip::tcp::socket::bind(channel_->fd(), std::make_shared<address::v4>(ip, port)))
+            if(!tcp::socket::bind(channel_->fd(), std::make_shared<address::v4>(ip, port)))
             {
                 log_error(ip, port);
                 ::perror("bind error)");
@@ -42,14 +42,14 @@ namespace rtoys
              channel_->onRead(
                             [this]
                             {
-                                int fd = socket::accept(channel_->fd());
+                                int fd = tcp::socket::accept(channel_->fd());
                                 if(fd == -1)
                                 {
                                     if(errno == EMFILE)
                                     {
                                         log_error("file descriptor use out...");
                                         util::io::close(idleFd_);
-                                        socket::close(socket::accept(channel_->fd()));
+                                        tcp::socket::close(tcp::socket::accept(channel_->fd()));
                                         idleFd_ = util::io::open("/dev/null");
                                     }
                                     return;

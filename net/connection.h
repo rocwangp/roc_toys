@@ -21,6 +21,13 @@ namespace rtoys
         {
             public:
                 typedef std::function<void(const std::shared_ptr<Connection>&)> conn_cb_type;;
+
+                enum class ConnState
+                {
+                    NONE,
+                    CONNECTED,
+                    CLOSED
+                };
             public:
                 Connection(EventLoop* loop);
                 Connection(EventLoop* loop, int fd);
@@ -43,6 +50,9 @@ namespace rtoys
                 std::string readAll();
                 std::string readUtil(const std::string& boundary);
 
+            public:
+                bool isConnected() const noexcept { return state_ == ConnState::CONNECTED; }
+                bool isClosed() const noexcept { return state_ == ConnState::CLOSED; }
             private:
                 EventLoop *loop_;
                 std::unique_ptr<Channel> channel_;
@@ -52,6 +62,8 @@ namespace rtoys
                 std::shared_ptr<Buffer> writeBuffer_;
                 conn_cb_type buildcb_, readcb_, writecb_, closecb_;
                 std::chrono::milliseconds connInterval_;
+
+                ConnState state_; 
         };
     }
 }

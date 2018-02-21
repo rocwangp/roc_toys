@@ -28,7 +28,7 @@ class HttpServer
 
     public:
         HttpServer(const std::string& ip, unsigned short port)
-            : server_(ip, port)
+            : server_(&loop_, ip, port)
         {
 
         }
@@ -46,17 +46,11 @@ class HttpServer
                             log_trace;
                             std::stringstream stream(conn->readUtil("\r\n\r\n"));
                             Request request = parseRequest(stream);
-                            /* request.context = std::make_shared<std::stringstream>(stream); */
                             request.content = std::make_shared<std::stringstream>(conn->readAll());
                             respond(conn, request);
-                            /* if(!request.headers.count("Connection") || request.headers["Connection"] != "keep-alive") */
-                            /* { */
-                            /*     conn->close(); */
-                            /* } */
                         }
                     );
-
-            server_.start();
+            loop_.loop();
         }
 
         resource_type& resource() { return resource_; }
@@ -116,6 +110,7 @@ class HttpServer
         resource_type resource_;
         resource_type defaultResource_;
     private:
+        rtoys::net::EventLoop loop_;
         rtoys::net::TcpServer server_;
         std::vector<resource_type::iterator> resources_;
         

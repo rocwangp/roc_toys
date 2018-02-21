@@ -41,6 +41,7 @@ namespace rtoys
                    buffer_.append(" " );
                    return this->operator()(args...);
                 }
+
             public:
                 std::size_t size() const ;
                 std::string retrieveAll();

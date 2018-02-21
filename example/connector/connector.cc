@@ -1,12 +1,11 @@
 #include "../../rtoys.h"
-#include <thread>
-#include <string>
 #include <iostream>
 
 int main()
 {
     rtoys::net::EventLoop base;
     auto conn = std::make_shared<rtoys::net::Connection>(&base);
+    conn->setConnInterval(std::chrono::milliseconds(1000));
     conn->onRead(
                 [](const auto& connPtr)
                 {
@@ -19,7 +18,10 @@ int main()
                     std::string line;
                     while(std::getline(std::cin, line))
                     {
-                        conn->send(line);
+                        if(conn->isConnected())
+                            conn->send(line);
+                        else
+                            log_error("no connection");
                     }
                 }
             );

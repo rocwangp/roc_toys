@@ -8,13 +8,14 @@ namespace rtoys
 {
     namespace net
     {
-        using namespace rtoys::ip::tcp;
+        using namespace rtoys::ip;
 
         Connection::Connection(EventLoop* loop)
             : loop_(loop),
               readBuffer_(std::make_shared<Buffer>()),
               writeBuffer_(std::make_shared<Buffer>()),
-              connInterval_(std::chrono::milliseconds(1000))
+              connInterval_(-1),
+              state_(ConnState::NONE)
         {
 
         }
@@ -22,11 +23,12 @@ namespace rtoys
         Connection::Connection(EventLoop* loop, int fd)
             : loop_(loop),
               channel_(std::make_unique<Channel>(loop, fd)),
-              endpoint_(rtoys::ip::tcp::address::v4(), fd),
+              endpoint_(rtoys::ip::address::v4(), fd),
               name_(endpoint_.localAddrToString() + endpoint_.peerAddrToString()),
               readBuffer_(std::make_shared<Buffer>()),
               writeBuffer_(std::make_shared<Buffer>()),
-              connInterval_(std::chrono::milliseconds(1000))
+              connInterval_(-1),
+              state_(ConnState::NONE)
         {
 
         }
@@ -38,12 +40,15 @@ namespace rtoys
         }
         void Connection::connEstablished()
         {
+            state_ = ConnState::CONNECTED;
             channel_->onRead(
                             [this]
                             {
-                                int n = socket::read(channel_->fd(), readBuffer_);
+                                int n = tcp::socket::read(channel_->fd(), readBuffer_);
                                 if(n <= 0)
-                                    close(); 
+                                {
+                                    close();
+                                }
                                 else 
                                 {
                                     readBuffer_->appendBytes(n);
@@ -57,7 +62,7 @@ namespace rtoys
                             {
                                 if(writecb_)
                                     writecb_(shared_from_this());
-                                int n = socket::write(channel_->fd(), writeBuffer_);
+                                int n = tcp::socket::write(channel_->fd(), writeBuffer_);
                                 if(n == writeBuffer_->size())
                                     channel_->disableWrite();
                                 this->writeBuffer_->appendBytes(n);
@@ -82,7 +87,7 @@ namespace rtoys
             }
             else
             {
-                int n = socket::write(channel_->fd(), msg);
+                int n = tcp::socket::write(channel_->fd(), msg);
                 if(n < static_cast<int>(msg.size()))
                 {
                     n = std::max(n, 0);
@@ -94,6 +99,7 @@ namespace rtoys
 
         void Connection::close()
         {
+            state_ = ConnState::CLOSED;
             channel_->disableAll();
             if(closecb_)
                 closecb_(shared_from_this());
@@ -112,22 +118,28 @@ namespace rtoys
 
         void Connection::connect(const std::string& ip, unsigned short port)
         {
-            int fd = socket::block_socket();
-            if(!socket::connect(fd, ip, port))
+            int fd = tcp::socket::block_socket();
+            log_trace;
+            if(!tcp::socket::connect(fd, ip, port))
             {
+                log_trace;
                 log_error(ip, port, std::strerror(errno));
                 ::close(fd);
-                loop_->runAfter(connInterval_,
-                                [this, ip, port]
-                                {
-                                    log_info("reconnct");
-                                    connect(ip, port);
-                                }
-                            );
+                if(connInterval_ >= std::chrono::milliseconds(0))
+                {
+                    loop_->runAfter(connInterval_,
+                                    [=]
+                                    {
+                                        log_info("reconnct");
+                                        connect(ip, port);
+                                    }
+                                );
+                }
                 return;
             }
+            log_trace;
+            tcp::socket::set_nonblock(fd); 
             channel_.reset(new Channel(loop_, fd));
-            socket::set_nonblock(fd); 
             endpoint_.reset(address::v4(), fd),
             name_ = (endpoint_.localAddrToString() + endpoint_.peerAddrToString()),
             connEstablished();

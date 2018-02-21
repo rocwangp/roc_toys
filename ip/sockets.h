@@ -20,8 +20,6 @@ namespace rtoys
 {
     namespace ip
     {
-        namespace tcp
-        {
             namespace address
             {
                 
@@ -96,145 +94,222 @@ namespace rtoys
                         }
                         
                 };
+                class v6: public AddressBase
+                {
+                    public:
+                        v6()
+                        {
+
+                        }
+                        v6(const std::string& ip, unsigned short port)
+                        {
+                            sockaddr_.sockaddr_v6.sin6_family = AF_INET6;
+                            sockaddr_.sockaddr_v6.sin6_port = ::htons(port);
+                            ::inet_pton(AF_INET, ip.c_str(), &sockaddr_.sockaddr_v6.sin6_addr);
+                        }
+
+                        virtual ~v6() {}
+                        virtual struct sockaddr* data() override
+                        {
+                            return (struct sockaddr*)(&sockaddr_.sockaddr_v6);
+                        }
+                        virtual std::size_t size() override
+                        {
+                            return sizeof(struct sockaddr_in);
+                        }
+
+                    public:
+                        virtual void toPeerAddress(int fd) override
+                        {
+                            std::memset(&sockaddr_, 0, size());
+                            socklen_t len = size();
+                            ::getpeername(fd, data(), &len);
+                        }
+
+                        virtual void toLocalAddress(int fd) override
+                        {
+                            std::memset(&sockaddr_, 0, size());
+                            socklen_t len = size();
+                            ::getsockname(fd, data(), &len);
+                        }
+                        
+                        virtual std::string toString() override
+                        {
+                            char ip[1024] = "\0";
+                            char port[1024] = "\0";
+                            std::sprintf(port, "%d", ::ntohs(sockaddr_.sockaddr_v6.sin6_port));
+                            ::inet_ntop(AF_INET, &sockaddr_.sockaddr_v6.sin6_addr, ip, sizeof(ip));
+                            std::stringstream oss;
+                            oss << "<" << ip << ":" << port << ">";
+                            return oss.str();
+                        }
+                        
+                };
             }
-            class socket
+
+            namespace tcp
             {
-                public:
-                    enum SOCKET_STATE { BLOCK, NON_BLOCK };
-                    enum {MAX_LISTEN_NUMS = 1000000};
-                    static int create_socket(SOCKET_STATE state = NON_BLOCK)
-                    {
-                        if(state == SOCKET_STATE::NON_BLOCK)
-                            return nonblock_socket();
-                        else
-                            return block_socket();
-                    }
-                    static int block_socket()
-                    {
-                        int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-                        reuse_port(fd);
-                        reuse_address(fd);
-                        return fd;
-                    }
-                    static int nonblock_socket()
-                    {
-                        int fd = ::socket(AF_INET, SOCK_STREAM, 0);
-                        int opt = 1;
-                        ::setsockopt(fd, SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(opt));
-                        reuse_port(fd);
-                        reuse_address(fd);
+                class socket
+                {
+                    public:
+                        enum SOCKET_STATE { BLOCK, NON_BLOCK };
+                        enum {MAX_LISTEN_NUMS = 1000000};
+                        static int create_socket(SOCKET_STATE state = NON_BLOCK)
+                        {
+                            if(state == SOCKET_STATE::NON_BLOCK)
+                                return nonblock_socket();
+                            else
+                                return block_socket();
+                        }
+                        static int block_socket()
+                        {
+                            int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+                            reuse_port(fd);
+                            reuse_address(fd);
+                            return fd;
+                        }
+                        static int nonblock_socket()
+                        {
+                            int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+                            int opt = 1;
+                            ::setsockopt(fd, SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(opt));
+                            reuse_port(fd);
+                            reuse_address(fd);
 
-                        return fd;
-                    }
-                    static void close(int fd)
-                    {
-                        ::close(fd);
-                    }
+                            return fd;
+                        }
+                        static void close(int fd)
+                        {
+                            ::close(fd);
+                        }
 
-                    static int accept(int listenFd)
-                    {
-                        address::v4 v4Addr;
-                        socklen_t len = v4Addr.size();
-                        return ::accept(listenFd, v4Addr.data(), &len);
-                    }
+                        static int accept(int listenFd)
+                        {
+                            address::v4 v4Addr;
+                            socklen_t len = v4Addr.size();
+                            return ::accept(listenFd, v4Addr.data(), &len);
+                        }
 
-                    static bool bind(int fd, std::shared_ptr<address::AddressBase> addressPtr)
-                    {
-                        if(::bind(fd, addressPtr->data(), addressPtr->size()) == -1)
-                            return false;
-                        return true;
-                    }
-                    static bool listen(int fd, std::size_t nums = MAX_LISTEN_NUMS)
-                    {
-                        if(::listen(fd, nums) == -1)
-                            return false;
-                        return true;
-                    }
+                        static bool bind(int fd, std::shared_ptr<address::AddressBase> addressPtr)
+                        {
+                            if(::bind(fd, addressPtr->data(), addressPtr->size()) == -1)
+                                return false;
+                            return true;
+                        }
+                        static bool listen(int fd, std::size_t nums = MAX_LISTEN_NUMS)
+                        {
+                            if(::listen(fd, nums) == -1)
+                                return false;
+                            return true;
+                        }
 
-                    static bool connect(int fd, const std::string& ip, unsigned short port)
-                    {
-                        address::v4 v4Addr(ip, port);
-                        if(::connect(fd, v4Addr.data(), v4Addr.size()) == -1)
-                            return false;
-                        return true;
-                    }
+                        static bool connect(int fd, const std::string& ip, unsigned short port)
+                        {
+                            address::v4 v4Addr(ip, port);
+                            log_debug(ip, port);
+                            if(::connect(fd, v4Addr.data(), v4Addr.size()) == -1)
+                                return false;
+                            return true;
+                        }
 
-                    static int read(int fd, std::shared_ptr<net::Buffer> readBuffer)
+                        static int read(int fd, std::shared_ptr<net::Buffer> readBuffer)
+                        {
+                            unsigned int bytes = 0;
+                            ::ioctl(fd, FIONREAD, &bytes); 
+                            readBuffer->enableSpace(bytes);
+                            int n = ::read(fd, readBuffer->end(), bytes);
+                            return n;
+                        }
+
+                        static int write(int fd, std::shared_ptr<net::Buffer> writeBuffer)
+                        {
+                            return ::write(fd, writeBuffer->begin(), writeBuffer->readableBytes()); 
+                        }
+
+                        static int write(int fd, const std::string& msg)
+                        {
+                            return ::write(fd, msg.c_str(), msg.size());
+                        }
+
+                        static void reuse_port(int fd)
+                        {
+                            int opt = 1;
+                            ::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+                        }
+                        static void reuse_address(int fd)
+                        {
+                            int opt = 1;
+                            ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+                        }
+                        static void set_nonblock(int fd)
+                        {
+                            int opt = 1;
+                            ::setsockopt(fd, SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(opt));
+                        }
+                };
+
+                
+                
+
+                class endpoint
+                {
+                    public:
+                        endpoint()
+                            : fd_(-1)
+                        {
+
+                        }
+                        endpoint(address::v4, int fd)
+                            : fd_(fd),
+                              peerAddr_(std::make_shared<address::v4>()),
+                              localAddr_(std::make_shared<address::v4>())
+                        {
+                           peerAddr_->toPeerAddress(fd_); 
+                           localAddr_->toLocalAddress(fd_);
+                        }
+
+                        void reset(address::v4 addr, int fd)
+                        {
+                            endpoint tmp(addr, fd);
+                            std::swap(tmp, *this);
+                        }
+                        
+                        std::string peerAddrToString()
+                        {
+                            return peerAddr_->toString(); 
+                        }
+                        std::string localAddrToString()
+                        {
+                            return localAddr_->toString();
+                        }
+
+                    private:
+                        int fd_;
+                        std::shared_ptr<address::AddressBase> peerAddr_;
+                        std::shared_ptr<address::AddressBase> localAddr_;
+                };
+            }
+
+            namespace udp
+            {
+                class sockets
+                {
+                    static address::v4 read(int fd, std::shared_ptr<net::Buffer> readBuffer)
                     {
                         unsigned int bytes = 0;
                         ::ioctl(fd, FIONREAD, &bytes); 
                         readBuffer->enableSpace(bytes);
-                        int n = ::read(fd, readBuffer->end(), bytes);
-                        return n;
+                        address::v4 v4; 
+                        socklen_t len = v4.size();
+                        ::recvfrom(fd, readBuffer->end(), bytes, 0, v4.data(), &len);
+                        return v4;
                     }
 
-                    static int write(int fd, std::shared_ptr<net::Buffer> writeBuffer)
+                    static void write(int fd, std::shared_ptr<net::Buffer> writeBuffer, address::v4& v4)
                     {
-                        return ::write(fd, writeBuffer->begin(), writeBuffer->readableBytes()); 
+                        ::sendto(fd, writeBuffer->data(), writeBuffer->readableBytes(), 0, v4.data(), v4.size());
                     }
-
-                    static int write(int fd, const std::string& msg)
-                    {
-                        return ::write(fd, msg.c_str(), msg.size());
-                    }
-
-                    static void reuse_port(int fd)
-                    {
-                        int opt = 1;
-                        ::setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-                    }
-                    static void reuse_address(int fd)
-                    {
-                        int opt = 1;
-                        ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-                    }
-                    static void set_nonblock(int fd)
-                    {
-                        int opt = 1;
-                        ::setsockopt(fd, SOL_SOCKET, SOCK_NONBLOCK, &opt, sizeof(opt));
-                    }
-            };
-
-            
-            
-
-            class endpoint
-            {
-                public:
-                    endpoint()
-                        : fd_(-1)
-                    {
-
-                    }
-                    endpoint(address::v4, int fd)
-                        : fd_(fd),
-                          peerAddr_(std::make_shared<address::v4>()),
-                          localAddr_(std::make_shared<address::v4>())
-                    {
-                       peerAddr_->toPeerAddress(fd_); 
-                       localAddr_->toLocalAddress(fd_);
-                    }
-
-                    void reset(address::v4 addr, int fd)
-                    {
-                        endpoint tmp(addr, fd);
-                        std::swap(tmp, *this);
-                    }
-                    
-                    std::string peerAddrToString()
-                    {
-                        return peerAddr_->toString(); 
-                    }
-                    std::string localAddrToString()
-                    {
-                        return localAddr_->toString();
-                    }
-
-                private:
-                    int fd_;
-                    std::shared_ptr<address::AddressBase> peerAddr_;
-                    std::shared_ptr<address::AddressBase> localAddr_;
-            };
-        }
+                };
+            }
     }
 }
