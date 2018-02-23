@@ -28,7 +28,7 @@ void startServer(HttpServer& server)
             contentStream.seekp(0, std::ios::end);
             response << "HTTP/1.1 200 OK\r\n"
                      << "Content-Length: " << contentStream.tellp() << "\r\n"
-                     << "Content-Type: " << "text/plain"
+                     << "Content-Type: " << "text/html"
                      << "\r\n\r\n" << contentStream.rdbuf();
         };
 
@@ -149,20 +149,37 @@ void startServer(HttpServer& server)
                 filename.append("/index.html");
             }
 
+            std::string filetype = "text/plain";
+            pos = filename.rfind('.');
+            if(pos != std::string::npos)
+            {
+                std::string type = filename.substr(pos + 1);
+                if(type == "html")
+                    filetype = "text/html";
+                else if(type == "gif")
+                    filetype = "image/gif";
+                else if(type == "jpg")
+                    filetype = "image/jpeg";
+                else if(type == "png")
+                    filetype = "image/png";
+            }
+
             std::ifstream ifs(filename, std::ios_base::in);
             if(ifs.is_open())
             {
                 ifs.seekg(0, std::ios::end);
                 std::size_t len = ifs.tellg();
                 ifs.seekg(0, std::ios::beg);
-                response << "HTTP/1.1 200 OK\r\nContent-Length: " << len 
+                response << "HTTP/1.1 200 OK\r\nContent-Length: " << len << "\r\n"
+                         << "Content-Type: " << filetype << "\r\n"
                          << "\r\n\r\n" << ifs.rdbuf();
                 ifs.close();
             }
             else
             {
                 std::string content = "could not open file " + filename;
-                response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.size()
+                response << "HTTP/1.1 200 OK\r\nContent-Length: " << content.size() << "\r\n"
+                         << "Content-Type: " << "text/plain" << "\r\n"
                          << "\r\n\r\n" << content;
             }
         };
