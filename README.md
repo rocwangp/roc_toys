@@ -108,7 +108,80 @@ int main()
 }
 ```
 
-------
+
+
+#### HTTP服务器
+
+* 支持GET/POST请求
+* 支持静态/动态文件链接
+* 扩展方便，直接在handle.h文件中添加文件匹配规则和处理方法即可
+
+
+##### 示例
+
+```c
+void startServer(HttpServer& server)
+{
+    server.resource()["^/info/?$"]["GET"] = 
+        [](std::stringstream& response, const Request& request)
+        {
+            log_trace;
+            std::stringstream contentStream;
+            contentStream << "<h1>Request:</h1>";
+            contentStream << request.method << " " << request.uri << " HTTP/" << request.version << "<br>";
+            for(auto& header : request.headers)
+                contentStream << header.first << ": " << header.second << "</br>";
+
+            contentStream.seekp(0, std::ios::end);
+            response << "HTTP/1.1 200 OK\r\n"
+                     << "Content-Length: " << contentStream.tellp() << "\r\n"
+                     << "Content-Type: " << "text/plain"
+                     << "\r\n\r\n" << contentStream.rdbuf();
+        };
+
+    server.resource()["^/cgi-bin/([0-9a-zA-Z]+)\\?(.*)$"]["GET"] = 
+        [](std::stringstream& response, const Request& request)
+        {
+            log_trace;
+            int fds[2];
+            ::pipe(fds);
+            pid_t pid = 1;
+            if((pid = ::fork()) == 0)
+            {
+                ::close(fds[0]);
+
+                char path[1024] = "\0";
+                ::getcwd(path, sizeof(path));
+                ::strcat(path, "/cgi-bin/");
+                std::string filename = path + request.match[1].str();
+                char* emptyList[] = { nullptr };
+                ::setenv("QUERY_STRING", request.match[2].str().c_str(), 1);
+                ::dup2(fds[1], STDOUT_FILENO);
+                ::execve(filename.c_str(), emptyList, ::environ);
+            }
+            else
+            {
+                ::close(fds[1]);
+                char buffer[4096] = "\0";
+                int n = 0;
+                while((n = ::read(fds[0], buffer, sizeof(buffer))) > 0)
+                {
+                    buffer[n] = '\0';
+                    response << buffer;
+                }
+                ::waitpid(pid, nullptr, 0);
+                ::close(fds[0]);
+            }
+        };
+
+	...
+
+    server.start();
+}
+```
+
+
+
 
 ## 不足及改进:
 

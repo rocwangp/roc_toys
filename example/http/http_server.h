@@ -12,7 +12,8 @@
 
 struct Request
 {
-    std::string method, source, version;
+    std::string method, uri, version;
+    std::vector<std::string> arguments;
     std::unordered_map<std::string, std::string> headers;
     std::shared_ptr<std::stringstream> content;
     std::smatch match;
@@ -69,7 +70,7 @@ class HttpServer
             if(std::regex_match(line, match, e))
             {
                 request.method = match[1];
-                request.source = match[2];
+                request.uri = match[2];
                 request.version = match[3];
                 
                 log_debug << match[1] << " " << match[2] << " " << match[3];
@@ -94,7 +95,7 @@ class HttpServer
             {
                 std::smatch match;
                 std::regex e(it->first);
-                if(std::regex_match(request.source, match, e) && it->second.count(request.method))
+                if(std::regex_match(request.uri, match, e) && it->second.count(request.method))
                 {
                     request.match = std::move(match); 
                     std::stringstream response; 
