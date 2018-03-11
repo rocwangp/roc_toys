@@ -1,8 +1,6 @@
 # rtoys
 
-## 一个C++11实现的Linux平台下简单网络库，采用Reactor模式
-
-### 基本组件设计原理
+### 网络库基本组件设计原理
 
 * 并发请求由epoll处理
 * one loop per thread，每个线程一个epoll
